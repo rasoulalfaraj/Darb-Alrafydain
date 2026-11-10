@@ -1,0 +1,18 @@
+<resources>
+    <string name="app_name">ملاحة العراق - درب الرافدين</string>
+    <string name="app_subtitle">المنظومة العراقية للملاحة الذكية وتحديد المواقع</string>
+    <string name="nav_map">الخريطة والملاحة</string>
+    <string name="nav_nearby">الأماكن القريبة</string>
+    <string name="nav_favorites">المفضلة والسجل</string>
+    <string name="nav_offline">دون اتصال و GitHub</string>
+    <string name="search_hint">ابحث في محافظات العراق، المعالم، المستشفيات، الوقود...</string>
+    <string name="voice_guidance_on">التوجيه الصوتي مفعّل</string>
+    <string name="voice_guidance_off">التوجيه الصوتي صامت</string>
+    <string name="offline_mode_active">وضع العمل دون اتصال مفعّل</string>
+    <string name="online_mode_active">متصل - خرائط جوجل العراق</string>
+    <string name="start_navigation">بدء الملاحة الصوتية</string>
+    <string name="stop_navigation">إنهاء الملاحة</string>
+    <string name="save_favorite">حفظ في المفضلة</string>
+    <string name="my_location">موقعي الحالي في العراق</string>
+    <string name="permission_rationale">يتطلب التطبيق صلاحية الموقع الجغرافي لتحديد موقعك بدقة عالية داخل العراق وتوجيهك صوتياً.</string>
+</resources>

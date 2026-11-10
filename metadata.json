@@ -1,0 +1,10 @@
+{
+  "name": "ملاحة العراق - درب الرافدين",
+  "description": "تطبيق ملاحة وتحديد المواقع الجغرافية لخارطة العراق بدقة عالية مع التوجيه الصوتي العربي والبحث الذكي والعمل دون اتصال بالإنترنت.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
