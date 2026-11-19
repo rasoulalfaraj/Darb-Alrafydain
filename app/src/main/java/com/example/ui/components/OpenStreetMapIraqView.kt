@@ -53,6 +53,7 @@ internal fun OpenStreetMapIraqView(
         config.osmdroidTileCache = config.osmdroidBasePath.resolve("tiles")
         config.userAgentValue = "Darb-Alrafydain/1.0 (+https://github.com/rasoulalfaraj/Darb-Alrafydain)"
         MapView(context).apply {
+            setDestroyMode(false)
             setTileSource(TileSourceFactory.MAPNIK)
             setMultiTouchControls(true)
             setHorizontalMapRepetitionEnabled(false)
@@ -79,7 +80,8 @@ internal fun OpenStreetMapIraqView(
 
     AndroidView(
         factory = { map },
-        modifier = Modifier.fillMaxSize().testTag("openstreetmap_iraq")
+        modifier = Modifier.fillMaxSize().testTag("openstreetmap_iraq"),
+        onRelease = { it.onDetach() }
     )
 
     DisposableEffect(map, lifecycle) {
@@ -93,8 +95,6 @@ internal fun OpenStreetMapIraqView(
         lifecycle.addObserver(observer)
         onDispose {
             lifecycle.removeObserver(observer)
-            map.onPause()
-            map.onDetach()
         }
     }
 
