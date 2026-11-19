@@ -34,11 +34,13 @@ jobs:
 
       - name: إعداد Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-36.1 build-tools;36.0.0'
 
-      - name: إعداد Gradle 8.11.1 مع التخزين المؤقت
+      - name: إعداد Gradle 9.3.1 مع التخزين المؤقت
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.11.1'
+          gradle-version: '9.3.1'
           cache-read-only: false
 
       - name: تجهيز ملف البيئة (.env) ومفاتيح التوقيع الرقمي (Keystores)
