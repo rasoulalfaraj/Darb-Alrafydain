@@ -93,6 +93,17 @@ fun IraqDualEngineMapView(
                 onSelectPlace = onSelectPlace,
                 onTapMapLatLng = onTapMapLatLng
             )
+        } else if (!isOfflineMode) {
+            OpenStreetMapIraqView(
+                cameraTarget = cameraTarget,
+                cameraZoom = cameraZoom,
+                userLocation = userIraqLocation,
+                selectedPlace = selectedPlace,
+                nearbyPlaces = nearbyPlaces,
+                activeRoute = activeRoute,
+                onSelectPlace = onSelectPlace,
+                onTapMap = onTapMapLatLng
+            )
         } else {
             IraqVectorOfflineMapCanvas(
                 mapStyleMode = mapStyleMode,
@@ -161,6 +172,7 @@ private fun GoogleMapsIraqView(
             myLocationButtonEnabled = false,
             mapToolbarEnabled = false
         ),
+        onPOIClick = { poi -> onTapMapLatLng(poi.latLng) },
         onMapClick = { latLng ->
             onTapMapLatLng(latLng)
         }

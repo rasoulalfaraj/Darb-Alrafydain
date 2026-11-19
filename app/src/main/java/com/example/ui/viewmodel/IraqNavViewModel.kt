@@ -11,11 +11,13 @@ import com.example.data.local.NavigationHistoryEntity
 import com.example.data.local.OfflineGovernorateEntity
 import com.example.data.model.ActiveIraqRoute
 import com.example.data.model.IraqMapCatalog
+import com.example.data.model.OpenStreetMapSearch
 import com.example.data.model.IraqPlace
 import com.example.data.model.PlaceCategory
 import com.example.service.GpsTelemetryState
 import com.example.service.VoiceAndLocationManager
 import com.google.android.gms.maps.model.LatLng
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,6 +26,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 enum class IraqNavTab(val titleAr: String) {
@@ -65,7 +68,6 @@ class IraqNavViewModel(application: Application) : AndroidViewModel(application)
     private val _isOfflineMode = MutableStateFlow(false)
     val isOfflineMode: StateFlow<Boolean> = _isOfflineMode.asStateFlow()
 
-    // محرك الخريطة: يدعم التبديل بين Google Maps SDK والخريطة المتجهة التفاعلية للعراق
     private val _preferGoogleMapsEngine = MutableStateFlow(hasConfiguredMapsApiKey)
     val preferGoogleMapsEngine: StateFlow<Boolean> = _preferGoogleMapsEngine.asStateFlow()
 
@@ -98,6 +100,15 @@ class IraqNavViewModel(application: Application) : AndroidViewModel(application)
 
     private val _customAddedPlaces = MutableStateFlow<List<IraqPlace>>(emptyList())
 
+    private val onlinePlaces = MutableStateFlow<List<IraqPlace>>(emptyList())
+    private val _isSearchingOnline = MutableStateFlow(false)
+    val isSearchingOnline: StateFlow<Boolean> = _isSearchingOnline.asStateFlow()
+    private var onlineSearchJob: Job? = null
+
+    private val availablePlaces = combine(_customAddedPlaces, onlinePlaces) { custom, online ->
+        IraqMapCatalog.IRAQ_PLACES + custom + online
+    }
+
     private val _statusBannerAr = MutableStateFlow<String?>(null)
     val statusBannerAr: StateFlow<String?> = _statusBannerAr.asStateFlow()
 
@@ -124,20 +135,22 @@ class IraqNavViewModel(application: Application) : AndroidViewModel(application)
     )
 
     // البحث الذكي الفوري وترتيب الأماكن القريبة حسب المسافة من موقع المستخدم داخل العراق
+    private val localFilters = combine(_searchQuery, _selectedCategory, _selectedGovernorateAr) { query, category, gov ->
+        Triple(query, category, gov)
+    }
+
     val filteredNearbyPlaces: StateFlow<List<PlaceWithDistance>> = combine(
-        _searchQuery,
-        _selectedCategory,
-        _selectedGovernorateAr,
+        localFilters,
+        availablePlaces,
         gpsState,
         favorites
-    ) { query, category, gov, gps, favList ->
+    ) { (query, category, gov), allPlaces, gps, favList ->
         val normalizedQuery = IraqMapCatalog.normalizeArabic(query)
-        val allPlaces = IraqMapCatalog.IRAQ_PLACES + _customAddedPlaces.value
 
         allPlaces.filter { place ->
             val matchesCategory = category == PlaceCategory.ALL || place.category == category
             val matchesGov = gov == "كل العراق" || place.governorateAr == gov
-            val matchesSearch = if (normalizedQuery.isBlank()) {
+            val matchesSearch = if (normalizedQuery.isBlank() || place.id.startsWith("osm_")) {
                 true
             } else {
                 val haystacks = listOf(
@@ -191,7 +204,38 @@ class IraqNavViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun updateSearchQuery(query: String) {
+        if (_searchQuery.value == query) return
+        clearOnlineSearch()
         _searchQuery.value = query
+    }
+
+    fun searchOpenStreetMap() {
+        val query = _searchQuery.value.trim()
+        if (_isOfflineMode.value || _preferGoogleMapsEngine.value || query.length < 2 ||
+            _isSearchingOnline.value
+        ) return
+
+        selectTab(IraqNavTab.NEARBY_PLACES)
+        _isSearchingOnline.value = true
+        onlineSearchJob = viewModelScope.launch {
+            try {
+                val results = OpenStreetMapSearch.findPlaces(query)
+                onlinePlaces.value = results
+                if (results.isEmpty()) showTransientBanner("لم يعثر OpenStreetMap على نتائج لهذا البحث")
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                showTransientBanner("تعذّر البحث في OpenStreetMap. حاول مرة أخرى بعد التحقق من الاتصال")
+            } finally {
+                if (isActive) _isSearchingOnline.value = false
+            }
+        }
+    }
+
+    private fun clearOnlineSearch() {
+        onlineSearchJob?.cancel()
+        onlinePlaces.value = emptyList()
+        _isSearchingOnline.value = false
     }
 
     fun selectCategory(category: PlaceCategory) {
@@ -393,7 +437,7 @@ class IraqNavViewModel(application: Application) : AndroidViewModel(application)
         val next = !_isOfflineMode.value
         _isOfflineMode.value = next
         if (next) {
-            _preferGoogleMapsEngine.value = false
+            clearOnlineSearch()
             showTransientBanner("تم تفعيل وضع العمل دون اتصال بالإنترنت (خرائط العراق المحفوظة محلياً)")
         } else {
             showTransientBanner("تم تفعيل وضع الاتصال المباشر")
@@ -401,11 +445,14 @@ class IraqNavViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun toggleMapEngine() {
-        val next = !_preferGoogleMapsEngine.value
-        _preferGoogleMapsEngine.value = next
-        if (next && !hasConfiguredMapsApiKey) {
-            showTransientBanner("ملاحظة: أضف MAPS_API_KEY في لوحة Secrets لعرض بلاطات Google Maps الحية")
+        if (_isOfflineMode.value) return
+        if (!_preferGoogleMapsEngine.value && !hasConfiguredMapsApiKey) {
+            showTransientBanner("أضف MAPS_API_KEY لتفعيل Google Maps")
+            return
         }
+        clearOnlineSearch()
+        _preferGoogleMapsEngine.value = !_preferGoogleMapsEngine.value
+        _mapStyleMode.value = 0
     }
 
     fun cycleMapStyleMode() {
