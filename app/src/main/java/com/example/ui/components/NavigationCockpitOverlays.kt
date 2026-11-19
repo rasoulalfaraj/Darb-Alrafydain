@@ -286,7 +286,7 @@ fun TopIraqSearchAndFiltersOverlay(
 internal fun OpenStreetMapAttribution() {
     val uriHandler = LocalUriHandler.current
     TextButton(onClick = { uriHandler.openUri("https://www.openstreetmap.org/copyright") }) {
-        Text("© OpenStreetMap", style = MaterialTheme.typography.labelSmall)
+        Text("© OpenStreetMap contributors", style = MaterialTheme.typography.labelSmall)
     }
 }
 

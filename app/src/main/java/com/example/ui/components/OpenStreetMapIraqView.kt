@@ -63,8 +63,8 @@ internal fun OpenStreetMapIraqView(
                     IraqMapCatalog.IRAQ_MIN_LAT, IraqMapCatalog.IRAQ_MIN_LNG
                 )
             )
-            minZoomLevel = 5.0
-            maxZoomLevel = 19.0
+            setMinZoomLevel(5.0)
+            setMaxZoomLevel(19.0)
             overlays.add(MapEventsOverlay(object : MapEventsReceiver {
                 override fun singleTapConfirmedHelper(point: GeoPoint): Boolean {
                     tapMap.value(LatLng(point.latitude, point.longitude))
