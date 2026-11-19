@@ -1,5 +1,6 @@
 package com.example
 
+import android.net.Uri
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
@@ -54,6 +55,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -99,10 +101,12 @@ fun IraqNavigationAppRoot(
 ) {
     val context = LocalContext.current
     val currentTab by viewModel.currentTab.collectAsStateWithLifecycle()
+    val uriHandler = LocalUriHandler.current
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val selectedCategory by viewModel.selectedCategory.collectAsStateWithLifecycle()
     val selectedGovernorateAr by viewModel.selectedGovernorateAr.collectAsStateWithLifecycle()
     val isOfflineMode by viewModel.isOfflineMode.collectAsStateWithLifecycle()
+    val isSearchingOnline by viewModel.isSearchingOnline.collectAsStateWithLifecycle()
     val preferGoogleMaps by viewModel.preferGoogleMapsEngine.collectAsStateWithLifecycle()
     val mapStyleMode by viewModel.mapStyleMode.collectAsStateWithLifecycle()
     val voiceEnabled by viewModel.voiceGuidanceEnabled.collectAsStateWithLifecycle()
@@ -121,6 +125,24 @@ fun IraqNavigationAppRoot(
     val offlineGovernorates by viewModel.offlineGovernorates.collectAsStateWithLifecycle()
     val filteredNearbyPlaces by viewModel.filteredNearbyPlaces.collectAsStateWithLifecycle()
     val statusBannerAr by viewModel.statusBannerAr.collectAsStateWithLifecycle()
+
+    val onlineSearchLabel = when {
+        isOfflineMode -> null
+        preferGoogleMaps -> "فتح البحث في Google Maps"
+        isSearchingOnline -> "جارٍ البحث في OpenStreetMap…"
+        else -> "بحث في OpenStreetMap"
+    }
+    val onSearchOnline: () -> Unit = {
+        if (preferGoogleMaps) {
+            val uri = Uri.parse("https://www.google.com/maps/search/").buildUpon()
+                .appendQueryParameter("api", "1")
+                .appendQueryParameter("query", "${searchQuery.trim()} العراق")
+                .build()
+            uriHandler.openUri(uri.toString())
+        } else {
+            viewModel.searchOpenStreetMap()
+        }
+    }
 
     // طلب صلاحية الموقع الجغرافي عالي الدقة في وقت التشغيل
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -234,6 +256,10 @@ fun IraqNavigationAppRoot(
                                     selectedGovernorateAr = selectedGovernorateAr,
                                     isOfflineMode = isOfflineMode,
                                     voiceEnabled = voiceEnabled,
+                                    preferGoogleMaps = preferGoogleMaps,
+                                    onlineSearchLabel = onlineSearchLabel,
+                                    isSearchingOnline = isSearchingOnline,
+                                    onSearchOnline = onSearchOnline,
                                     onSearchChange = { viewModel.updateSearchQuery(it) },
                                     onSelectCategory = { viewModel.selectCategory(it) },
                                     onSelectGovernorate = { viewModel.selectGovernorate(it) },
@@ -246,6 +272,7 @@ fun IraqNavigationAppRoot(
                                 // أزرار التحكم بالخريطة العائمة
                                 FloatingIraqMapControlsColumn(
                                     preferGoogleMaps = preferGoogleMaps && !isOfflineMode,
+                                    isOfflineMode = isOfflineMode,
                                     mapStyleMode = mapStyleMode,
                                     onZoomIn = { viewModel.zoomIn() },
                                     onZoomOut = { viewModel.zoomOut() },
@@ -318,6 +345,10 @@ fun IraqNavigationAppRoot(
                                 selectedCategory = selectedCategory,
                                 selectedGovernorateAr = selectedGovernorateAr,
                                 currentOriginLabelAr = gpsState.currentLocationNameAr,
+                                onlineSearchLabel = onlineSearchLabel,
+                                isSearchingOnline = isSearchingOnline,
+                                onSearchOnline = onSearchOnline,
+                                showOpenStreetMapAttribution = !isOfflineMode && !preferGoogleMaps,
                                 nearbyPlaces = filteredNearbyPlaces,
                                 onSearchChange = { viewModel.updateSearchQuery(it) },
                                 onSelectCategory = { viewModel.selectCategory(it) },

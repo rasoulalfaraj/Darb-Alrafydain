@@ -92,6 +92,10 @@ fun NearbySmartSearchScreen(
     selectedCategory: PlaceCategory,
     selectedGovernorateAr: String,
     currentOriginLabelAr: String,
+    onlineSearchLabel: String?,
+    isSearchingOnline: Boolean,
+    onSearchOnline: () -> Unit,
+    showOpenStreetMapAttribution: Boolean,
     nearbyPlaces: List<PlaceWithDistance>,
     onSearchChange: (String) -> Unit,
     onSelectCategory: (PlaceCategory) -> Unit,
@@ -159,6 +163,18 @@ fun NearbySmartSearchScreen(
                 .fillMaxWidth()
                 .testTag("nearby_search_field")
         )
+
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (onlineSearchLabel != null) {
+                TextButton(
+                    onClick = onSearchOnline,
+                    enabled = searchQuery.trim().length >= 2 && !isSearchingOnline
+                ) {
+                    Text(onlineSearchLabel)
+                }
+            }
+            if (showOpenStreetMapAttribution) OpenStreetMapAttribution()
+        }
 
         Spacer(modifier = Modifier.height(8.dp))
 

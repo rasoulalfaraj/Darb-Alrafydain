@@ -58,11 +58,13 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -84,6 +86,10 @@ fun TopIraqSearchAndFiltersOverlay(
     selectedGovernorateAr: String,
     isOfflineMode: Boolean,
     voiceEnabled: Boolean,
+    preferGoogleMaps: Boolean,
+    onlineSearchLabel: String?,
+    isSearchingOnline: Boolean,
+    onSearchOnline: () -> Unit,
     onSearchChange: (String) -> Unit,
     onSelectCategory: (PlaceCategory) -> Unit,
     onSelectGovernorate: (String) -> Unit,
@@ -187,6 +193,22 @@ fun TopIraqSearchAndFiltersOverlay(
                     }
                 }
 
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    when {
+                        isOfflineMode -> Text("خريطة محلية", style = MaterialTheme.typography.labelMedium)
+                        preferGoogleMaps -> Text("Google Maps", style = MaterialTheme.typography.labelMedium)
+                        else -> OpenStreetMapAttribution()
+                    }
+                    if (onlineSearchLabel != null && searchQuery.trim().length >= 2) {
+                        TextButton(onClick = onSearchOnline, enabled = !isSearchingOnline) {
+                            Text(onlineSearchLabel)
+                        }
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(6.dp))
 
                 // شريط المحافظات العراقية السريع
@@ -261,8 +283,17 @@ fun TopIraqSearchAndFiltersOverlay(
 }
 
 @Composable
+internal fun OpenStreetMapAttribution() {
+    val uriHandler = LocalUriHandler.current
+    TextButton(onClick = { uriHandler.openUri("https://www.openstreetmap.org/copyright") }) {
+        Text("© OpenStreetMap contributors", style = MaterialTheme.typography.labelSmall)
+    }
+}
+
+@Composable
 fun FloatingIraqMapControlsColumn(
     preferGoogleMaps: Boolean,
+    isOfflineMode: Boolean,
     mapStyleMode: Int,
     onZoomIn: () -> Unit,
     onZoomOut: () -> Unit,
@@ -323,6 +354,7 @@ fun FloatingIraqMapControlsColumn(
 
         FilledIconButton(
             onClick = onCycleMapStyle,
+            enabled = preferGoogleMaps || isOfflineMode,
             colors = IconButtonDefaults.filledIconButtonColors(
                 containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
                 contentColor = MaterialTheme.colorScheme.onSurface
@@ -337,13 +369,14 @@ fun FloatingIraqMapControlsColumn(
 
         FilledIconButton(
             onClick = onToggleMapEngine,
+            enabled = !isOfflineMode,
             colors = IconButtonDefaults.filledIconButtonColors(
                 containerColor = if (preferGoogleMaps) RouteEmerald else MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
                 contentColor = if (preferGoogleMaps) Color.White else TigrisTurquoise
             ),
             modifier = Modifier.size(48.dp).testTag("toggle_map_engine_button")
         ) {
-            Icon(Icons.Default.Map, contentDescription = "تبديل محرك Google Maps / خريطة العراق المتجهة")
+            Icon(Icons.Default.Map, contentDescription = "تبديل الخريطة بين Google Maps وOpenStreetMap")
         }
     }
 }
